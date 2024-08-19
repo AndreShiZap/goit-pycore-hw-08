@@ -1,7 +1,7 @@
-# бот-асистент адресної книги: 
-# зберігає ім'я, номер телефону та дату народження у файлі addressbook.pkl", 
-# знаходить номер телефону за ім'ям, змінює записаний номер телефону, 
-# знаходить дату народження за ім'ям, змінює дату народження, 
+# бот-асистент адресної книги:
+# зберігає ім'я, номер телефону та дату народження у файлі addressbook.pkl",
+# знаходить номер телефону за ім'ям, змінює записаний номер телефону,
+# знаходить дату народження за ім'ям, змінює дату народження,
 # виводить на консоль дати народження на наступні 7 днів
 # виводить в консоль всі записи, які збереженні
 from functools import wraps
@@ -35,10 +35,8 @@ def input_error(func):
                 return f"It's not a phone number.\n{e}"
             elif inner.__name__ == 'add_birthday':
                 return f"Enter the argument for the command: name and birthday (dd.mm.yyyy)"
-            #            elif inner.__name__ == 'phone_show':
-            #                return e
             else:
-                return e  # "ValueError"
+                return e
         except KeyError:
             return "Contact not found"
         except IndexError:
@@ -308,39 +306,27 @@ def load_data(filename=FILE_STORE):
         return AddressBook()
 
 
-def info_(list_command):
-    str_comm = f"Available commands: {list_command}\n"
-    str_comm += "Format command:\n"
-    str_comm += "add name phone - adds a contact and/or phone number\n"
-    str_comm += "change name old_phone new_phone - changes the contact's phone number\n"
-    str_comm += "phone name - shows contact phone numbers\n"
-    str_comm += "all - shows all contents of the address book\n"
-    str_comm += "add-birthday name birthday(dd.mm.yyyy) - adds/changes contact's date of birth\n"
-    str_comm += "show-birthday name - shows the contact's date of birth\n"
-    str_comm += "birthdays name - shows birthdays in the next 7 days\n"
-    str_comm += "close/exit - terminates the program\n"
-    return str_comm
+class Bot(ABC):
+
+    @abstractmethod
+    def output(self, book: AddressBook, command, args):
+        ...
+
+    @abstractmethod
+    def output_text(self, value: str):
+        ...
+
+    @abstractmethod
+    def output_command(self):
+        ...
 
 
-def main():
-    print("Welcome to the assistant bot!")
-    book = load_data()
-    #    book = AddressBook()
-    list_command = ['hello', 'add', 'change', 'phone', 'all',
-                    'add-birthday', 'show-birthday', 'birthdays', 'close/exit']
-    while True:
-        user_input = input("Enter a command or Help: ")
-        command, *args = parse_input(user_input)
+class BotAssistant(Bot):
+    def __init__(self):
+        self.book = AddressBook()
 
+    def output(self, book: AddressBook, command, args):
         match command:
-            case ("close" | "exit"):
-                print("Good bye!")
-                save_data(book)
-                break
-            case "hello":
-                print("How can I help you?")
-            case "help":
-                print(info_(list_command))
             case "add":
                 print(add_contact(args, book))
             case "change":
@@ -355,8 +341,53 @@ def main():
                 print(show_birthday(args, book))
             case "birthdays":
                 print(birthdays(book))
-            case _:
-                print(f"Invalid command.\nAvailable commands: {list_command}")
+
+    def output_text(self, command):
+        if command == "close" or command == "exit":
+            print("Good bye!")
+        elif command == "hello":
+            print("How can I help you?")
+        else:
+            print(f"Invalid command.")
+
+    def output_command(self):
+        list_command = ['hello', 'add', 'change', 'phone', 'all',
+                        'add-birthday', 'show-birthday', 'birthdays', 'close/exit']
+        str_comm = f"Available commands: {list_command}\n"
+        str_comm += "Format command:\n"
+        str_comm += "add name phone - adds a contact and/or phone number\n"
+        str_comm += "change name old_phone new_phone - changes the contact's phone number\n"
+        str_comm += "phone name - shows contact phone numbers\n"
+        str_comm += "all - shows all contents of the address book\n"
+        str_comm += "add-birthday name birthday(dd.mm.yyyy) - adds/changes contact's date of birth\n"
+        str_comm += "show-birthday name - shows the contact's date of birth\n"
+        str_comm += "birthdays - shows birthdays in the next 7 days\n"
+        str_comm += "close/exit - terminates the program\n"
+        return list_command, str_comm
+
+
+def main():
+    print("Welcome to the assistant bot!")
+    book = load_data()
+    bot_assistant = BotAssistant()
+    list_command, str_comm = bot_assistant.output_command()
+
+    while True:
+        user_input = input("Enter a command or Help: ")
+        command, *args = parse_input(user_input)
+
+        if command in list_command[1:-1]:
+            bot_assistant.output(book, command, args)
+        elif command == "close" or command == "exit":
+            bot_assistant.output_text(command)
+            break
+        elif command == "hello":
+            bot_assistant.output_text(command)
+        elif command == "help":
+            print(str_comm)
+        else:
+            bot_assistant.output_text(command)
+    save_data(book)
 
 
 if __name__ == "__main__":
